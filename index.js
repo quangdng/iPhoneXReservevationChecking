@@ -6,7 +6,7 @@ const NotificationCenter = require('node-notifier/notifiers/notificationcenter')
 
 var storesUrl = 'https://reserve-prime.apple.com/AU/en_AU/reserve/iPhoneX/stores.json';
 var stockUrl = 'https://reserve-prime.apple.com/AU/en_AU/reserve/iPhoneX/availability.json';
-var onlineReserveURL = 'https://reserve-prime.apple.com/AU/en_AU/reserve/iPhoneX/availability?channel=1'
+var onlineReserveURL = 'https://reserve-prime.apple.com/AU/en_AU/reserve/iPhoneX/availability'
 
 var stockLastUpdated;
 
@@ -14,7 +14,7 @@ var stores;
 var stock;
 var storeNameMap = {};
 
-new CronJob('*/5 * * * * *', function() {
+new CronJob('* * * * * *', function() {
     console.log("Checking iPhone X stock in the AU stores...")
 
     if (!stores) {
@@ -60,7 +60,7 @@ function listAvailableStock() {
 
             for (var s in stockEntry) {
                 var availability = stockEntry[s].availability
-                if (availability && availability.unlocked) {
+                if (availability && (availability.unlocked || availability.contract)) {
                     foundStock = true;
                     console.log(storeName + " has stock!");
                     notifier.notify({
