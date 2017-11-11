@@ -1,18 +1,16 @@
-var https = require('https');
-var Notification = require('node-notifier');
 var CronJob = require('cron').CronJob;
 var request = require('superagent')
 const NotificationCenter = require('node-notifier/notifiers/notificationcenter');
 
 var storesUrl = 'https://reserve-prime.apple.com/AU/en_AU/reserve/iPhoneX/stores.json';
-var stockUrl = 'https://reserve-prime.apple.com/AU/en_AU/reserve/iPhoneX/availability.json';
+var availabilityUrl = 'https://reserve-prime.apple.com/AU/en_AU/reserve/iPhoneX/availability.json';
 var onlineReserveURL = 'https://reserve-prime.apple.com/AU/en_AU/reserve/iPhoneX/availability'
 
-var stockLastUpdated;
+var updatedAt;
 
 var stores;
-var stock;
-var storeNameMap = {};
+var availability;
+var storeAvailabilityMapping = {};
 
 new CronJob('* * * * * *', function() {
     console.log("Checking iPhone X stock in the AU stores...")
@@ -20,48 +18,46 @@ new CronJob('* * * * * *', function() {
     if (!stores) {
         request.get(storesUrl).end(function (err, res) {
             if (err || !res.ok) {
-                console.log("Got error for URL " + storesUrl + " : ", err);
+                console.log(err)
             } else {
                 stores = JSON.parse(res.text).stores;
             }
         });
     }
 
-    request.get(stockUrl).end(function(err, res)  {
+    request.get(availabilityUrl).end(function(err, res)  {
         if (err || !res.ok) {
-            console.log("Got error for URL "+stockUrl+" : ", err);
+            console.log(err)
         } else {
             var body = JSON.parse(res.text)
-            stock = body.stores;
-            console.log(body.updated)
-            stockLastUpdated = new Date(body.updated);
-            delete stock.updated;
-            listAvailableStock();
+            availability = body.stores;
+            updatedAt = new Date(body.updated);
+            checkStock(stores, availability);
         }
     });
 
 }, null, true);
 
-function listAvailableStock() {
+function checkStock(stores, availability) {
     var notifier = new NotificationCenter();
-    if (stores != null && stock != null) {
+    if (stores && availability) {
         for (var i in stores) {
             var store = stores[i];
             var storeName = store.storeName;
             var storeNumber = store.storeNumber;
-            storeNameMap[storeNumber] = storeName;
+            storeAvailabilityMapping[storeNumber] = storeName;
         }
 
-        var foundStock = false;
+        var stockFound = false;
 
-        for (var storeNumber in stock) {
-            var stockEntry = stock[storeNumber];
-            var storeName = storeNameMap[storeNumber];
+        for (var storeNumber in availability) {
+            var stockEntry = availability[storeNumber];
+            var storeName = storeAvailabilityMapping[storeNumber];
 
             for (var s in stockEntry) {
                 var availability = stockEntry[s].availability
                 if (availability && (availability.unlocked || availability.contract)) {
-                    foundStock = true;
+                    stockFound = true;
                     console.log(storeName + " has stock!");
                     notifier.notify({
                         title: 'Found!',
@@ -73,14 +69,11 @@ function listAvailableStock() {
             }
         }
 
-        if (!foundStock) {
+        if (!stockFound) {
             console.log("No stock at all");
         }
 
-        // console.log("");
-        // console.log(`Go to ${stockUrl} for more info`);
-        // console.log("");
-        console.log("Last updated: " + stockLastUpdated.getHours()+":"+stockLastUpdated.getMinutes());
+        console.log("Last updated: " + updatedAt.getHours()+":"+updatedAt.getMinutes());
         console.log("___")
     }
 }
