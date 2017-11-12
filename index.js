@@ -9,7 +9,7 @@ var onlineReserveURL = 'https://reserve-prime.apple.com/AU/en_AU/reserve/iPhoneX
 var updatedAt;
 
 var stores;
-var availability;
+var availabilityList;
 var storeAvailabilityMapping = {};
 
 new CronJob('* * * * * *', function() {
@@ -30,17 +30,17 @@ new CronJob('* * * * * *', function() {
             console.log(err)
         } else {
             var body = JSON.parse(res.text)
-            availability = body.stores;
+            availabilityList = body.stores;
             updatedAt = new Date(body.updated);
-            checkStock(stores, availability);
+            checkStock(stores, availabilityList);
         }
     });
 
 }, null, true);
 
-function checkStock(stores, availability) {
+function checkStock(stores, availabilityList) {
     var notifier = new NotificationCenter();
-    if (stores && availability) {
+    if (stores && availabilityList) {
         for (var i in stores) {
             var store = stores[i];
             var storeName = store.storeName;
@@ -50,8 +50,8 @@ function checkStock(stores, availability) {
 
         var stockFound = false;
 
-        for (var storeNumber in availability) {
-            var stockEntry = availability[storeNumber];
+        for (var storeNumber in availabilityList) {
+            var stockEntry = availabilityList[storeNumber];
             var storeName = storeAvailabilityMapping[storeNumber];
 
             for (var s in stockEntry) {
